@@ -60,6 +60,7 @@ def generateGeoJSONStringFromShpFile(
 def generateJsonString(parameterNameForId, features):
     jsonString = json.dumps(
         {
+            # TODO might want to rename it
             'id_param_name': parameterNameForId,
             'type': 'FeatureCollection',
             'features': features
