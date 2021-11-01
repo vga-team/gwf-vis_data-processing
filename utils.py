@@ -15,3 +15,9 @@ def logTime(operationName=None):
             return result
         return inner
     return wrapper
+
+
+def writeFile(path: str, content: str):
+    file = open(path, 'w')
+    file.write(content)
+    file.close()

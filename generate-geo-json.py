@@ -1,5 +1,5 @@
 from typing import Callable
-from utils import logTime
+from utils import logTime, writeFile
 import shapefile
 import json
 
@@ -24,6 +24,22 @@ class BoundingBox:
 
 
 Filter = Callable[[Callable[[str], int]], bool]
+
+
+def generateGeoJSONFileFromShpFile(
+    shpFilePath: str,
+    parameterNameForId: str,
+    outputPath: str,
+    boundingBox: BoundingBox = None,
+    filter: Filter = None
+):
+    content = generateGeoJSONStringFromShpFile(
+        shpFilePath,
+        parameterNameForId,
+        boundingBox,
+        filter
+    )
+    writeFile(outputPath, content)
 
 
 @logTime('generating geo-JSON string')
@@ -81,7 +97,8 @@ def checkIfShouldSkip(boundingBox, filter, shapeRecord):
 def checkFilter(filter, shapeRecord):
     if not filter:
         return True
-    getValue = lambda parameterName: int(shapeRecord.record[parameterName])
+
+    def getValue(parameterName): return int(shapeRecord.record[parameterName])
     if filter(getValue):
         return True
     else:
@@ -104,5 +121,5 @@ def checkInBoundary(boundingBox, shapeRecord):
 # TODO remove the testing later
 boundingBox = BoundingBox(48.98022, 59.91098, -119.70703, -101.77735)
 filter: Filter = lambda getValue: getValue('COMID') > -1
-generateGeoJSONStringFromShpFile(
-    'river_network/bow_river_network_from_merit_hydro.shp', 'COMID', boundingBox, filter)
+generateGeoJSONFileFromShpFile(
+    'river_network/bow_river_network_from_merit_hydro.shp', 'COMID', './test.json', boundingBox, filter)
