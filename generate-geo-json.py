@@ -1,26 +1,16 @@
+from dataclasses import dataclass
 from typing import Callable
 from utils import logExecutionTime, writeFile
 import shapefile
 import json
 
 
+@dataclass
 class BoundingBox:
     minLatitude: float
     maxLatitude: float
     minLongitude: float
     maxLongitude: float
-
-    def __init__(
-        self,
-        minLatitude: float,
-        maxLatitude: float,
-        minLongitude: float,
-        maxLongitude: float
-    ):
-        self.minLatitude = minLatitude
-        self.maxLatitude = maxLatitude
-        self.minLongitude = minLongitude
-        self.maxLongitude = maxLongitude
 
 
 Filter = Callable[[Callable[[str], int]], bool]
