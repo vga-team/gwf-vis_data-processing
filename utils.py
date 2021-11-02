@@ -1,10 +1,12 @@
 from datetime import date, datetime, timedelta
 import errno
 import os
+import shutil
 
 SECONDS_PER_MINUTE = 60
 MINUTES_PER_HOUR = 60
 HOURS_PER_DAY = 24
+
 
 def logExecutionTime(operationName=None):
     if not operationName:
@@ -52,3 +54,10 @@ def calculateDaysForTheYear(year: int):
 
 def calculateActualDatetime(initialDatetime: datetime, delta: timedelta):
     return initialDatetime + delta
+
+
+def tryRemoveDirectory(path: str):
+    try:
+        shutil.rmtree(path)
+    finally:
+        pass
