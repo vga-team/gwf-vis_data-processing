@@ -1,7 +1,7 @@
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 import json
 import netCDF4 as nc
 import numpy as np
@@ -19,7 +19,7 @@ TimeInSeconds = float
 @dataclass
 class VariableDefinition:
     name: str
-    expression: Optional[Callable[[Callable[[str], float]], float]] = None
+    expression: Optional[Callable[[Callable[[str], np.ndarray]], np.ndarray]] = None
 
 
 @dataclass
@@ -116,8 +116,14 @@ def generateDailyDataFromDailyNetCDFData(
     rowIdsFromDataset = np.around(dataset[rowInfo.name][:]).astype(int)
     rowIndexes = np.where(np.isin(rowIdsFromDataset, rowIds))[0]
 
-    valuesPerDay = np.array(
-        dataset[variableDefinition.name][rowIndexes, columnIndexes]).tolist()
+    if variableDefinition.expression:
+        valuesPerDay = variableDefinition.expression(
+            lambda variableName: np.array(
+                dataset[variableName][rowIndexes, columnIndexes])
+        ).tolist()
+    else:
+        valuesPerDay = np.array(
+            dataset[variableDefinition.name][rowIndexes, columnIndexes]).tolist()
 
     dailyData = {}
 
@@ -192,7 +198,10 @@ yearRange = range(2008, 2013)
 variableDefinitions = [
     VariableDefinition('scalarSWE'),
     VariableDefinition('scalarAquiferBaseflow'),
-    VariableDefinition('scalarAquiferStorage')
+    VariableDefinition(
+        'scalarSWE * 2', lambda value: value('scalarSWE') * 2),
+    VariableDefinition(
+        'scalarSWE - scalarAquiferBaseflow', lambda value: value('scalarSWE') - value('scalarAquiferBaseflow'))
 ]
 columnInfo = ColumnInfo(
     'hruId', obtainValuesOfPropertyFromGeoJSONFile('./testdata/catchment.json', 'id'))
