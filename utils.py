@@ -1,7 +1,7 @@
 import time
 
 
-def logTime(operationName=None):
+def logExecutionTime(operationName=None):
     if not operationName:
         operationName = 'the operation'
 

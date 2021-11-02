@@ -1,5 +1,5 @@
 from typing import Callable
-from utils import logTime, writeFile
+from utils import logExecutionTime, writeFile
 import shapefile
 import json
 
@@ -42,7 +42,7 @@ def generateGeoJSONFileFromShpFile(
     writeFile(outputPath, content)
 
 
-@logTime('generating geo-JSON string')
+@logExecutionTime('generating geo-JSON string')
 def generateGeoJSONStringFromShpFile(
     shpFilePath: str,
     parameterNameForId: str,
