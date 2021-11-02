@@ -9,9 +9,6 @@ import numpy as np
 from utils import calculateDaysForTheYear, generateLoopingRange, logExecutionTime, writeFile
 
 INITIAL_DATE_STRING = '1990-01-01'
-SECONDS_PER_MINUTE = 60
-MINUTES_PER_HOUR = 60
-HOURS_PER_DAY = 24
 
 TimeInSeconds = float
 
@@ -19,7 +16,8 @@ TimeInSeconds = float
 @dataclass
 class VariableDefinition:
     name: str
-    expression: Optional[Callable[[Callable[[str], np.ndarray]], np.ndarray]] = None
+    expression: Optional[Callable[[
+        Callable[[str], np.ndarray]], np.ndarray]] = None
 
 
 @dataclass
@@ -191,36 +189,3 @@ def generateTimestamps(
         date += timedelta(seconds=timeStep)
 
     return timestamps
-
-
-netCDFFilePath = './testdata/SUMMA/run1_day.nc'
-yearRange = range(2008, 2013)
-variableDefinitions = [
-    VariableDefinition('scalarSWE'),
-    VariableDefinition('scalarAquiferBaseflow'),
-    VariableDefinition(
-        'scalarSWE * 2', lambda value: value('scalarSWE') * 2),
-    VariableDefinition(
-        'scalarSWE - scalarAquiferBaseflow', lambda value: value('scalarSWE') - value('scalarAquiferBaseflow'))
-]
-columnInfo = ColumnInfo(
-    'hruId', obtainValuesOfPropertyFromGeoJSONFile('./testdata/catchment.json', 'id'))
-timestampsForYears = generateTimestampsForYears(
-    INITIAL_DATE_STRING, yearRange, 1 * SECONDS_PER_MINUTE * MINUTES_PER_HOUR)
-rowInfo = RowInfo(
-    'time',
-    timestampsForYears,
-    yearRange.stop - yearRange.start + 1
-)
-parameterNameForId = 'HRU_ID'
-
-generateDataJSONFilesFromNetCDF(
-    netCDFFilePath,
-    yearRange,
-    variableDefinitions,
-    columnInfo,
-    rowInfo,
-    parameterNameForId,
-    Granularity.DAILY,
-    './testdata/data'
-)

@@ -107,10 +107,3 @@ def checkInBoundary(boundingBox, shapeRecord):
         return False
     else:
         return True
-
-
-# TODO remove the testing later
-boundingBox = BoundingBox(48.98022, 59.91098, -119.70703, -101.77735)
-filter: Filter = lambda getValue: getValue('HRU_ID') > -1
-generateGeoJSONFileFromShpFile(
-    './testdata/catchment/bow_distributed_elevation_zone.shp', 'HRU_ID', './testdata/catchment.json', boundingBox, filter)

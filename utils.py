@@ -2,6 +2,9 @@ from datetime import date, datetime, timedelta
 import errno
 import os
 
+SECONDS_PER_MINUTE = 60
+MINUTES_PER_HOUR = 60
+HOURS_PER_DAY = 24
 
 def logExecutionTime(operationName=None):
     if not operationName:
