@@ -1,5 +1,3 @@
-
-
 from generate_data_json import INITIAL_DATE_STRING, ColumnInfo, Granularity, RowInfo, VariableDefinition, generateDataJSONFilesFromNetCDF, generateTimestampsForYears, obtainValuesOfPropertyFromGeoJSONFile
 from generate_geo_json import BoundingBox, Filter, MetadataDefinition, generateGeoJSONFileFromShpFile
 from utils import MINUTES_PER_HOUR, SECONDS_PER_MINUTE, tryRemoveDirectory
