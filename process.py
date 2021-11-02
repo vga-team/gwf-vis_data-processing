@@ -47,6 +47,6 @@ generateDataJSONFilesFromNetCDF(
     columnInfo=columnInfo,
     rowInfo=rowInfo,
     parameterNameForId=parameterNameForId,
-    granularity=Granularity.DAILY,
+    granularities=[Granularity.DAILY],
     outputPath=dataJSONOutputPath
 )

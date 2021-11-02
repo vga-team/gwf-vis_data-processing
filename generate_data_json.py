@@ -57,10 +57,10 @@ def generateDataJSONFilesFromNetCDF(
     columnInfo: ColumnInfo,
     rowInfo: RowInfo,
     parameterNameForId: str,
-    granularity: List[Granularity],
+    granularities: List[Granularity],
     outputPath: str
 ):
-    if granularity == Granularity.DAILY:
+    if Granularity.DAILY in granularities:
         for variableDefinition in variableDefinitions:
             dailyData = {}
             columnIds = np.around(columnInfo.ids).astype(int)
