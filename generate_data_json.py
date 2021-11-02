@@ -5,6 +5,7 @@ from typing import Any, Callable, List, Optional
 import json
 import netCDF4 as nc
 import numpy as np
+from numpy.lib.function_base import average
 
 from utils import calculateDaysForTheYear, generateLoopingRange, logExecutionTime, writeFile
 
@@ -35,9 +36,9 @@ class RowInfo:
 
 
 class Granularity(Enum):
-    HOURLY = 1
-    DAILY = 2
-    MONTHLY = 3
+    HOURLY = 'hourly'
+    DAILY = 'daily'
+    MONTHLY = 'monthly'
 
 
 @dataclass
@@ -60,41 +61,77 @@ def generateDataJSONFilesFromNetCDF(
     granularities: List[Granularity],
     outputPath: str
 ):
-    if Granularity.DAILY in granularities:
-        for variableDefinition in variableDefinitions:
-            dailyData = {}
-            columnIds = np.around(columnInfo.ids).astype(int)
+    for variableDefinition in variableDefinitions:
+        if Granularity.DAILY in granularities:
+            generateDataJSONFile(netCDFFilePath, yearRange, columnInfo,
+                                 rowInfo, parameterNameForId, outputPath, variableDefinition, Granularity.DAILY)
+        if Granularity.MONTHLY in granularities:
+            generateDataJSONFile(netCDFFilePath, yearRange, columnInfo,
+                                 rowInfo, parameterNameForId, outputPath, variableDefinition, Granularity.MONTHLY)
 
-            rawDailyData, actualColumnIndexes, actualRowIndexes = generateDailyDataFromDailyNetCDFData(
-                netCDFFilePath, variableDefinition, columnInfo, rowInfo, yearRange)
-            for columnIndex in actualColumnIndexes.tolist():
-                for year in generateLoopingRange(yearRange):
-                    dailyDataForCurrentYear = {}
-                    columnValuesForCurrentYear = rawDailyData[year][:, columnIndex].tolist(
+
+def generateDataJSONFile(
+    netCDFFilePath: str,
+    yearRange: range,
+    columnInfo: ColumnInfo,
+    rowInfo: RowInfo,
+    parameterNameForId: str,
+    outputPath: str,
+    variableDefinition: VariableDefinition,
+    granularity: Granularity
+):
+    data = {}
+    columnIds = np.around(columnInfo.ids).astype(int)
+
+    rawDailyData, actualColumnIndexes, actualRowIndexes = generateDailyDataFromDailyNetCDFData(
+        netCDFFilePath, variableDefinition, columnInfo, rowInfo, yearRange)
+    for columnIndex in actualColumnIndexes.tolist():
+        for year in generateLoopingRange(yearRange):
+            dataForCurrentYear = {}
+            columnValuesForCurrentYear = rawDailyData[year][:, columnIndex].tolist(
+            )
+
+            if granularity == Granularity.DAILY:
+                # TODO the days can be 365 or 366
+                for day in range(0, 365):
+                    dataForCurrentDay = DataItem(
+                        round(columnValuesForCurrentYear[day], 3),
+                        round(columnValuesForCurrentYear[day], 3),
+                        round(columnValuesForCurrentYear[day], 3),
+                        round(columnValuesForCurrentYear[day], 3),
+                        [columnValuesForCurrentYear[day]]
                     )
+                    dataForCurrentYear[day] = asdict(dataForCurrentDay)
+            if granularity == Granularity.MONTHLY:
+                # TODO the February days can be 28 or 29
+                daysOfMonths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+                for month in range(0, 12):
+                    dayValues = []
+                    for day in range(daysOfMonths[month]):
+                        dayValue = np.around(
+                            columnValuesForCurrentYear[month], 3)
+                        dayValues.append(dayValue)
 
-                    # TODO the days seem having problems
-                    for day in range(0, 365):
-                        dataForCurrentDay = DataItem(
-                            round(columnValuesForCurrentYear[day], 3),
-                            round(columnValuesForCurrentYear[day], 3),
-                            round(columnValuesForCurrentYear[day], 3),
-                            round(columnValuesForCurrentYear[day], 3),
-                            [columnValuesForCurrentYear[day]]
-                        )
-                        dailyDataForCurrentYear[day] = asdict(
-                            dataForCurrentDay)
-                    dailyData[year] = dailyDataForCurrentYear
-                filePath = f'{outputPath}/{variableDefinition.name}/daily/id_{str(columnIds[columnIndex])}.json'
-                jsonString = json.dumps(
-                    {
-                        parameterNameForId: str(columnIds[columnIndex]),
-                        'peroid_type': 'Daily',
-                        'data': dailyData
-                    },
-                    indent=2
-                )
-                writeFile(filePath, jsonString)
+                    dataForCurrentMonth = DataItem(
+                        round(sum(dayValues), 3),
+                        round(min(dayValues), 3),
+                        round(max(dayValues), 3),
+                        round(average(dayValues), 3),
+                        dayValues
+                    )
+                    dataForCurrentYear[month] = asdict(dataForCurrentMonth)
+
+            data[year] = dataForCurrentYear
+        filePath = f'{outputPath}/{variableDefinition.name}/{granularity.value}/id_{str(columnIds[columnIndex])}.json'
+        jsonString = json.dumps(
+            {
+                parameterNameForId: str(columnIds[columnIndex]),
+                'peroid_type': 'Daily',
+                'data': data
+            },
+            indent=2
+        )
+        writeFile(filePath, jsonString)
 
 
 def generateDailyDataFromDailyNetCDFData(
