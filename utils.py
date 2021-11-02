@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime, timedelta
+import errno
+import os
 
 
 def logExecutionTime(operationName=None):
@@ -21,6 +23,29 @@ def logExecutionTime(operationName=None):
 
 
 def writeFile(path: str, content: str):
-    file = open(path, 'w')
-    file.write(content)
-    file.close()
+    if not os.path.exists(os.path.dirname(path)):
+        try:
+            os.makedirs(os.path.dirname(path))
+        except OSError as e:  # Guard against race condition
+            if e.errno != errno.EEXIST:
+                raise
+    with open(path, 'w') as file:
+        file.write(content)
+
+
+def generateLoopingRange(inputRange: range):
+    loopingRange = range(
+        inputRange.start, inputRange.stop + 1, inputRange.step)
+    return loopingRange
+
+
+def calculateDaysForTheYear(year: int):
+    date1 = date(year, 1, 1)
+    date2 = date(year + 1, 1, 1)
+    delta = date2 - date1
+    days = delta.days
+    return days
+
+
+def calculateActualDatetime(initialDatetime: datetime, delta: timedelta):
+    return initialDatetime + delta
