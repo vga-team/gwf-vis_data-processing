@@ -1,4 +1,4 @@
-import time
+from datetime import datetime
 
 
 def logExecutionTime(operationName=None):
@@ -7,11 +7,14 @@ def logExecutionTime(operationName=None):
 
     def wrapper(fn):
         def inner(*args, **kw):
-            startTime = time.time()
+            startTime = datetime.now()
+            print(f'Started {operationName} at {startTime}.')
             result = fn(*args, **kw)
-            endTime = time.time()
+            endTime = datetime.now()
+            print(f'Ended {operationName} at {endTime}.')
+            timeElapsed = endTime - startTime
             print(
-                f'Time elapsed for {operationName} is {endTime - startTime} seconds.')
+                f'Time elapsed for {operationName} is {timeElapsed.days} days and {timeElapsed.seconds} seconds and {timeElapsed.microseconds} microseconds.')
             return result
         return inner
     return wrapper
