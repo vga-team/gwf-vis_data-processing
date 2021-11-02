@@ -1,22 +1,26 @@
 
 
 from generate_data_json import INITIAL_DATE_STRING, ColumnInfo, Granularity, RowInfo, VariableDefinition, generateDataJSONFilesFromNetCDF, generateTimestampsForYears, obtainValuesOfPropertyFromGeoJSONFile
-from generate_geo_json import BoundingBox, Filter, generateGeoJSONFileFromShpFile
-from utils import MINUTES_PER_HOUR, SECONDS_PER_MINUTE
+from generate_geo_json import BoundingBox, Filter, MetadataDefinition, generateGeoJSONFileFromShpFile
+from utils import MINUTES_PER_HOUR, SECONDS_PER_MINUTE, tryRemoveDirectory
 
 outputPath = './testdata/out'
+
+tryRemoveDirectory(outputPath)
 
 shpFilePath = './testdata/catchment/bow_distributed_elevation_zone.shp'
 parameterNameForId = 'HRU_ID'
 geoJSONOutputPath = f'{outputPath}/catchment.json'
 boundingBox = BoundingBox(48.98022, 59.91098, -119.70703, -101.77735)
 filter: Filter = lambda getValue: getValue('HRU_ID') > -1
+metadataDefinition = MetadataDefinition('HRU_ID_', f'{outputPath}/metadata')
 generateGeoJSONFileFromShpFile(
     shpFilePath=shpFilePath,
     parameterNameForId=parameterNameForId,
     boundingBox=boundingBox,
     filter=filter,
-    outputPath=geoJSONOutputPath
+    outputPath=geoJSONOutputPath,
+    metadataDefinition=metadataDefinition
 )
 
 netCDFFilePath = './testdata/SUMMA/run1_day.nc'

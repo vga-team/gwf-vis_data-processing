@@ -16,38 +16,44 @@ class BoundingBox:
 Filter = Callable[[Callable[[str], int]], bool]
 
 
+@dataclass
+class MetadataDefinition:
+    fileNamePrefix: str
+    directoryPath: str
+
+
+@logExecutionTime('generating Geo-JSON')
 def generateGeoJSONFileFromShpFile(
     shpFilePath: str,
     parameterNameForId: str,
     outputPath: str,
     boundingBox: BoundingBox = None,
-    filter: Filter = None
-):
-    content = generateGeoJSONStringFromShpFile(
-        shpFilePath,
-        parameterNameForId,
-        boundingBox,
-        filter
-    )
-    writeFile(outputPath, content)
-
-
-@logExecutionTime('generating Geo-JSON string')
-def generateGeoJSONStringFromShpFile(
-    shpFilePath: str,
-    parameterNameForId: str,
-    boundingBox: BoundingBox = None,
     filter: Filter = None,
-) -> str:
+    metadataDefinition: MetadataDefinition = None
+):
     reader = shapefile.Reader(shpFilePath)
+
+    if(metadataDefinition):
+        generateMetadataFiles(parameterNameForId, metadataDefinition, reader)
+
+    generateGeoJSONFile(parameterNameForId, outputPath,
+                        boundingBox, filter, reader)
+
+
+def generateMetadataFiles(parameterNameForId, metadataDefinition, reader):
+    fields = reader.fields[1:]
+    fieldNames = [field[0] for field in fields]
+    for shapeRecord in reader.shapeRecords():
+        id = int(shapeRecord.record[parameterNameForId])
+        filePath = f'{metadataDefinition.directoryPath}/{metadataDefinition.fileNamePrefix}{str(id)}.json'
+        data = dict(zip(fieldNames, shapeRecord.record))
+        content = json.dumps({'data': data}, indent=2)
+        writeFile(filePath, content)
+
+
+def generateGeoJSONFile(parameterNameForId, outputPath, boundingBox, filter, reader):
     features = generateFeatures(
         parameterNameForId, boundingBox, filter, reader)
-    jsonString = generateJsonString(parameterNameForId, features)
-
-    return jsonString
-
-
-def generateJsonString(parameterNameForId, features):
     jsonString = json.dumps(
         {
             # TODO might want to rename it
@@ -57,8 +63,7 @@ def generateJsonString(parameterNameForId, features):
         },
         indent=2
     ) + '\n'
-
-    return jsonString
+    writeFile(outputPath, jsonString)
 
 
 def generateFeatures(parameterNameForId, boundingBox, filter, reader):
