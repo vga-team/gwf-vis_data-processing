@@ -32,7 +32,7 @@ def generateGeoJSONFileFromShpFile(
     writeFile(outputPath, content)
 
 
-@logExecutionTime('generating geo-JSON string')
+@logExecutionTime('generating Geo-JSON string')
 def generateGeoJSONStringFromShpFile(
     shpFilePath: str,
     parameterNameForId: str,
