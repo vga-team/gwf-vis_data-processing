@@ -24,12 +24,25 @@ generateGeoJSONFileFromShpFile(
 netCDFFilePath = './testdata/SUMMA/run1_day.nc'
 yearRange = range(2008, 2013)
 variableDefinitions = [
-    VariableDefinition('scalarSWE'),
     VariableDefinition('scalarAquiferBaseflow'),
+    VariableDefinition('scalarAquiferStorage'),
+    VariableDefinition('scalarCanopyWat'),
+    VariableDefinition('scalarInfiltration'),
+    VariableDefinition('scalarLatHeatTotal'),
+    VariableDefinition('scalarNetRadiation'),
+    VariableDefinition('scalarRainPlusMelt'),
+    VariableDefinition('scalarSenHeatTotal'), 
+    VariableDefinition('scalarSoilBaseflow'),
+    VariableDefinition('scalarSoilDrainage'), 
+    VariableDefinition('scalarSurfaceRunoff'), 
+    VariableDefinition('scalarSWE'),
+    VariableDefinition('scalarTotalET'),
+    VariableDefinition('scalarTotalRunoff'),
+    VariableDefinition('scalarTotalSoilWat'),
     VariableDefinition(
-        'scalarSWE * 2', lambda value: value('scalarSWE') * 2),
+        'scalarSWE times 2', lambda value: value('scalarSWE') * 2),
     VariableDefinition(
-        'scalarSWE - scalarAquiferBaseflow', lambda value: value('scalarSWE') - value('scalarAquiferBaseflow'))
+        'scalarSWE - scalarSenHeatTotal', lambda value: value('scalarSWE') - value('scalarSenHeatTotal'))
 ]
 columnInfo = ColumnInfo(
     'hruId', obtainValuesOfPropertyFromGeoJSONFile(geoJSONOutputPath, 'id'))
