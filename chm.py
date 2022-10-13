@@ -34,7 +34,7 @@ db_cursor.execute('''
     )
 ''')
 db_cursor.execute('''
-    insert into info (key, value, label) values ('name', 'mesh', 'Name')
+    insert into info (key, value, label) values ('name', 'chm', 'Name')
 ''')
 db_cursor.execute('''
     insert into info (key, value, label) values ('description', 'something...', 'Description')
