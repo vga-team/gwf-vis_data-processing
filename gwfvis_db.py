@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import json
 import os
 import sqlite3
-from typing import Any, Dict, Sequence
+from typing import Dict, Sequence
 
 # %% data structures
 
@@ -80,12 +80,16 @@ class Options:
 NEW_LINE_CHARACTER = '\n'
 
 
+def _open_database(path: str):
+    return sqlite3.connect(path)
+
+
 def _create_database(path: str):
     try:
         os.remove(path)
     except:
         pass
-    return sqlite3.connect(path)
+    return _open_database(path)
 
 
 def _execute_sql(db_connection: sqlite3.Connection, sql: str, params: Sequence = None):
@@ -254,7 +258,80 @@ def _fill_tables(db_connection: sqlite3.Connection, options: Options):
     _fill_variable_dimension_table(db_connection, options.variables)
     _fill_value_table(db_connection, options.values)
 
-# %% main function
+
+def _query_db_table(db_connection: sqlite3.Connection, table_name: str, columns: Sequence[str] = None):
+    db_cursor = db_connection.cursor()
+    columns_to_query = columns
+    if columns is None:
+        columns_to_query = ['*']
+    sql = f'''
+        SELECT {', '.join(columns_to_query)} FROM {table_name}
+    '''
+    db_cursor.execute(sql)
+    headers = list(map(lambda d: d[0], db_cursor.description))
+    rows = db_cursor.fetchall()
+    return list(map(lambda row: dict(zip(headers, row)), rows))
+
+
+# %% exported functions
+
+def read_gwfvis_db(path: str):
+    db_connection = _open_database(path)
+    query_result = _query_db_table(
+        db_connection=db_connection, table_name='info')
+    info = list(map(lambda d: Info(
+        key=d['key'], value=d['value'], label=d['label']), query_result))
+
+    query_result = _query_db_table(
+        db_connection=db_connection, table_name='location')
+    locations = list(map(lambda d: Location(id=d['id'], geometry=json.loads(
+        d['geometry']), metadata=json.loads(d['metadata'])), query_result))
+
+    query_result = _query_db_table(
+        db_connection=db_connection, table_name='dimension')
+    dimensions = list(map(lambda d: Dimension(id=d['id'], name=d['name'], size=d['size'],
+                      description=d['description'], value_labels=json.loads(d['value_labels'])), query_result))
+
+    query_result = _query_db_table(
+        db_connection=db_connection, table_name='variable')
+    variables = list(map(lambda d: Variable(
+        id=d['id'], name=d['name'], unit=d['unit'], description=d['description'], dimensions=[]), query_result))
+
+    query_result = _query_db_table(
+        db_connection=db_connection, table_name='variable_dimension')
+    for q in query_result:
+        variable_id = q['variable']
+        dimension_id = q['dimension']
+        variable = next(
+            filter(lambda variable: variable.id == variable_id, variables), None)
+        dimension = next(
+            filter(lambda dimension: dimension.id == dimension_id, dimensions), None)
+        if (variable is not None and dimension is not None):
+            variable.dimensions.append(dimension)
+
+    query_result = _query_db_table(
+        db_connection=db_connection, table_name='value')
+    values = list(
+        map(
+            lambda value: Value(
+                location=value['location'],
+                variable=next(
+                    variable for variable in variables if variable.id == value['variable']),
+                value=value['value'],
+                dimension_dict=dict(
+                    map(
+                        lambda key: (next(dimension for dimension in dimensions if dimension.id == int(
+                            key[10:])), value[key]),
+                        list(filter(lambda key: key.startswith(
+                            'dimension_'), value.keys()))
+                    )
+                )
+            ),
+            query_result
+        )
+    )
+
+    return Options(info=info, locations=locations, dimensions=dimensions, variables=variables, values=values)
 
 
 def generate_gwfvis_db(path: str, options: Options):
@@ -262,3 +339,14 @@ def generate_gwfvis_db(path: str, options: Options):
     _create_tables(db_connection, options.dimensions)
     _fill_tables(db_connection, options)
     db_connection.commit()
+
+
+def clone_gwfvis_db(source_path: str, destination_path: str):
+    source_db_connection = _open_database(source_path)
+    destination_db_connection = _create_database(destination_path)
+    source_db_connection.backup(destination_db_connection)
+    source_db_connection.close()
+    return destination_db_connection
+
+
+# %%
