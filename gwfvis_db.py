@@ -314,9 +314,10 @@ def read_gwfvis_db(path: str):
     values = list(
         map(
             lambda value: Value(
-                location=value['location'],
+                location=next(filter(lambda location: location.id ==
+                              value['location'], locations), None),
                 variable=next(
-                    variable for variable in variables if variable.id == value['variable']),
+                    filter(lambda variable: variable.id == value['variable'], variables), None),
                 value=value['value'],
                 dimension_dict=dict(
                     map(
