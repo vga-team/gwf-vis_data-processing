@@ -97,28 +97,29 @@ variables = [
 ]
 
 # %% values
-values = []
-lons_size = len(lons)
-for location in tqdm.tqdm(locations):
-    for variable in variables:
-        dimension_value_ranges = []
-        for dimension in variable.dimensions:
-            dimension_value_ranges.append(range(dimension.size))
-        dimension_indices_combinations = itertools.product(
-            *dimension_value_ranges)
-        dimension_dicts = list(map(lambda dimension_indices_combination: dict(map(lambda index_and_dimension: (
-            index_and_dimension[1], dimension_indices_combination[index_and_dimension[0]]), enumerate(dimensions))), dimension_indices_combinations))
-        for dimension_dict in dimension_dicts:
-            dimension_cycle_index = dimension_dict[dimension_cycle]
-            dimension_gru_index = dimension_dict[dimension_gru]
-            dimension_level_index = dimension_dict[dimension_level]
-            dimension_time_index = dimension_dict[dimension_time]
-            lat_index = int(location.id / lons_size)
-            lon_index = location.id % lons_size
-            value = float(np.array(dataset.variables[variable.name][dimension_cycle_index,
-                          dimension_gru_index, dimension_level_index, dimension_time_index, lat_index, lon_index]))
-            values.append(Value(location=location, variable=variable,
-                          dimension_dict=dimension_dict, value=value))
+def values_generator():
+    lons_size = len(lons)
+    for location in tqdm.tqdm(locations):
+        for variable in variables:
+            dimension_value_ranges = []
+            for dimension in variable.dimensions:
+                dimension_value_ranges.append(range(dimension.size))
+            dimension_indices_combinations = itertools.product(
+                *dimension_value_ranges)
+            dimension_dicts = list(map(lambda dimension_indices_combination: dict(map(lambda index_and_dimension: (
+                index_and_dimension[1], dimension_indices_combination[index_and_dimension[0]]), enumerate(dimensions))), dimension_indices_combinations))
+            for dimension_dict in dimension_dicts:
+                dimension_cycle_index = dimension_dict[dimension_cycle]
+                dimension_gru_index = dimension_dict[dimension_gru]
+                dimension_level_index = dimension_dict[dimension_level]
+                dimension_time_index = dimension_dict[dimension_time]
+                lat_index = int(location.id / lons_size)
+                lon_index = location.id % lons_size
+                value = float(np.array(dataset.variables[variable.name][dimension_cycle_index,
+                            dimension_gru_index, dimension_level_index, dimension_time_index, lat_index, lon_index]))
+                yield Value(location=location, variable=variable,
+                            dimension_dict=dimension_dict, value=value)
+values = values_generator()
 
 # %% main function
 generate_gwfvis_db(db_path, Options(
