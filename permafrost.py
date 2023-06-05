@@ -3,6 +3,7 @@ import netCDF4 as nc
 import numpy as np
 import itertools
 import json
+import tqdm
 from gwfvis_db import Dimension, Location, Options, Value, Variable, generate_gwfvis_db, Info
 
 # %% configs
@@ -98,7 +99,7 @@ variables = [
 # %% values
 values = []
 lons_size = len(lons)
-for location in locations:
+for location in tqdm.tqdm(locations):
     for variable in variables:
         dimension_value_ranges = []
         for dimension in variable.dimensions:
