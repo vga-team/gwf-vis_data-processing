@@ -3,13 +3,14 @@ import netCDF4 as nc
 import numpy as np
 import itertools
 import json
-import tqdm
+from tqdm import tqdm
 from gwfvis_db import Dimension, Location, Options, Value, Variable, generate_gwfvis_db, Info
 
 # %% configs
 # TODO modify the configs if needed
 db_path = 'output/permafrost.gwfvisdb'
 nc_file_path = 'data/permafrost/Tmin_max_spinning.nc'
+replace_zeros_with_null = True
 
 # %% getting ready
 dataset = nc.Dataset(nc_file_path)
@@ -71,22 +72,25 @@ dimensions = [
 
 # %% dimensions (REDUCED)
 # TODO uncomment following code to use reduced dimension sizes
-# dimension_cycle = Dimension(
-#     id=0, name='cycle', size=2)
-# dimension_gru = Dimension(
-#     id=1, name='gru', size=2)
-# dimension_level = Dimension(
-#     id=2, name='level', size=3)
-# dimension_time = Dimension(
-#     id=3, name='time', size=1)
-# dimensions = [
-#     dimension_cycle,
-#     dimension_gru,
-#     dimension_level,
-#     dimension_time
-# ]
-# dataset.variables['TSOL_MIN'] = dataset.variables['TSOL_MIN'][7:9, 7:9, 2:5]
-# dataset.variables['TSOL_MAX'] = dataset.variables['TSOL_MAX'][7:9, 7:9, 2:5]
+dimension_cycle = Dimension(
+    id=0, name='cycle', size=10)
+dimension_gru = Dimension(
+    id=1, name='gru', size=5)
+dimension_level = Dimension(
+    id=2, name='level', size=5)
+dimension_time = Dimension(
+    id=3, name='time', size=1)
+dimensions = [
+    dimension_cycle,
+    dimension_gru,
+    dimension_level,
+    dimension_time
+]
+dimension_cycle_step = dataset.dimensions['cycle'].size // 10
+dimension_gru_step = dataset.dimensions['gru'].size // 5
+dimension_level_step = dataset.dimensions['level'].size // 5
+dataset.variables['TSOL_MIN'] = dataset.variables['TSOL_MIN'][::dimension_cycle_step, ::dimension_gru_step, ::dimension_level_step]
+dataset.variables['TSOL_MAX'] = dataset.variables['TSOL_MAX'][::dimension_cycle_step, ::dimension_gru_step, ::dimension_level_step]
 
 # %% variables
 variable_TSOL_MIN = Variable(id=0, name='TSOL_MIN', dimensions=dimensions)
@@ -99,7 +103,7 @@ variables = [
 # %% values
 def values_generator():
     lons_size = len(lons)
-    for location in tqdm.tqdm(locations):
+    for location in tqdm(locations):
         for variable in variables:
             dimension_value_ranges = []
             for dimension in variable.dimensions:
@@ -117,6 +121,8 @@ def values_generator():
                 lon_index = location.id % lons_size
                 value = float(np.array(dataset.variables[variable.name][dimension_cycle_index,
                             dimension_gru_index, dimension_level_index, dimension_time_index, lat_index, lon_index]))
+                if replace_zeros_with_null and value == 0:
+                    value = None
                 yield Value(location=location, variable=variable,
                             dimension_dict=dimension_dict, value=value)
 values = values_generator()
