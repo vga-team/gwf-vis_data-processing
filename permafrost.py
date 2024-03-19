@@ -10,27 +10,32 @@ from gwfvis_db import Dimension, Location, Options, Value, Variable, generate_gw
 # TODO modify the configs if needed
 db_path = 'output/permafrost.gwfvisdb'
 nc_file_path = 'data/permafrost/Tmin_max_spinning.nc'
-replace_zeros_with_null = True
+replace_invalid_values_with_null = True
 
 # %% getting ready
 dataset = nc.Dataset(nc_file_path)
 lats = dataset.variables['lat'][:]
 lons = dataset.variables['lon'][:]
 
+lat_count_reduced_by = 10
+lon_count_reduced_by = 10
+lat_count = len(lats) // lat_count_reduced_by
+lon_count = len(lons) // lon_count_reduced_by
+
 # %% info
 id = 0
 matrix = []
-for lat in lats:
+for lat in range(lat_count):
     row = []
-    for lon in lons:
+    for lon in range(lon_count):
         row.append(id)
         id = id + 1
     matrix.append(row)
 matrix_info = {
-    "minLatitude": lats.min(),
-    "maxLatitude": lats.max(),
-    "minLongitude": lons.min(),
-    "maxLongitude": lons.max(),
+    "minLatitude": lats.min() + (lats.max() - lats.min()) / lat_count / 2,
+    "maxLatitude": lats.max() - (lats.max() - lats.min()) / lat_count / 2,
+    "minLongitude": lons.min() + (lons.max() - lons.min()) / lon_count / 2,
+    "maxLongitude": lons.max() - (lons.max() - lons.min()) / lon_count / 2,
     "idMatrix": matrix
 }
 json_string = json.dumps(matrix_info)
@@ -44,11 +49,14 @@ info = [
 # %% locations
 id = 0
 locations = []
-for lat in lats:
-    for lon in lons:
+for lat in range(lat_count):
+    for lon in range(lon_count):
         geometry = {
             'type': 'Point',
-            'coordinates': [lon, lat]
+            'coordinates': [
+                matrix_info['minLongitude'] + (matrix_info['maxLongitude'] - matrix_info['minLongitude']) / lon_count * lon,
+                matrix_info['minLatitude'] + (matrix_info['maxLatitude'] - matrix_info['minLatitude']) /lat_count * lat
+            ]
         }
         location = Location(id=id, geometry=geometry)
         locations.append(location)
@@ -70,28 +78,6 @@ dimensions = [
     dimension_time
 ]
 
-# %% dimensions (REDUCED)
-# TODO uncomment following code to use reduced dimension sizes
-dimension_cycle = Dimension(
-    id=0, name='cycle', size=10)
-dimension_gru = Dimension(
-    id=1, name='gru', size=5)
-dimension_level = Dimension(
-    id=2, name='level', size=5)
-dimension_time = Dimension(
-    id=3, name='time', size=1)
-dimensions = [
-    dimension_cycle,
-    dimension_gru,
-    dimension_level,
-    dimension_time
-]
-dimension_cycle_step = dataset.dimensions['cycle'].size // 10
-dimension_gru_step = dataset.dimensions['gru'].size // 5
-dimension_level_step = dataset.dimensions['level'].size // 5
-dataset.variables['TSOL_MIN'] = dataset.variables['TSOL_MIN'][::dimension_cycle_step, ::dimension_gru_step, ::dimension_level_step]
-dataset.variables['TSOL_MAX'] = dataset.variables['TSOL_MAX'][::dimension_cycle_step, ::dimension_gru_step, ::dimension_level_step]
-
 # %% variables
 variable_TSOL_MIN = Variable(id=0, name='TSOL_MIN', dimensions=dimensions)
 variable_TSOL_MAX = Variable(id=1, name='TSOL_MAX', dimensions=dimensions)
@@ -102,7 +88,6 @@ variables = [
 
 # %% values
 def values_generator():
-    lons_size = len(lons)
     for location in tqdm(locations):
         for variable in variables:
             dimension_value_ranges = []
@@ -117,11 +102,25 @@ def values_generator():
                 dimension_gru_index = dimension_dict[dimension_gru]
                 dimension_level_index = dimension_dict[dimension_level]
                 dimension_time_index = dimension_dict[dimension_time]
-                lat_index = int(location.id / lons_size)
-                lon_index = location.id % lons_size
-                value = float(np.array(dataset.variables[variable.name][dimension_cycle_index,
-                            dimension_gru_index, dimension_level_index, dimension_time_index, lat_index, lon_index]))
-                if replace_zeros_with_null and value == 0:
+                lat_index = int(location.id / lon_count)
+                lon_index = location.id % lon_count
+                lat_index_range = [
+                    max(round(lat_index * lat_count_reduced_by - lat_count_reduced_by / 2), 0),
+                    min(round(lat_index * lat_count_reduced_by + lat_count_reduced_by / 2), len(lats))
+                ]
+                lon_index_range = [
+                    max(round(lon_index * lon_count_reduced_by - lon_count_reduced_by / 2), 0),
+                    min(round(lon_index * lon_count_reduced_by + lon_count_reduced_by / 2), len(lons))
+                ]
+                value = float(np.array(dataset.variables[variable.name][
+                    dimension_cycle_index,
+                    dimension_gru_index, 
+                    dimension_level_index, 
+                    dimension_time_index, 
+                    lat_index_range[0]:lat_index_range[1], 
+                    lon_index_range[0]:lon_index_range[1]
+                ]).mean())
+                if replace_invalid_values_with_null and value < 0:
                     value = None
                 yield Value(location=location, variable=variable,
                             dimension_dict=dimension_dict, value=value)
