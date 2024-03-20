@@ -56,12 +56,17 @@ info = [
 ]
 
 # %% locations
-variable_field_names = map(lambda x: x["name"], variable_fields)
+variable_field_names = list(map(lambda x: x["name"], variable_fields))
 fields = [field for field in reader.fields[1:] if field[0] not in variable_field_names]
 locations_variable_data: Sequence[dict] = []
 locations: Sequence[Location] = []
 for shape_record in reader.shapeRecords():
-    if shape_record.shape.bbox[0] < bbox[0] or shape_record.shape.bbox[1] < bbox[1] or shape_record.shape.bbox[2] > bbox[2] or shape_record.shape.bbox[3] > bbox[3]:
+    if (
+        shape_record.shape.bbox[0] < bbox[0]
+        or shape_record.shape.bbox[1] < bbox[1]
+        or shape_record.shape.bbox[2] > bbox[2]
+        or shape_record.shape.bbox[3] > bbox[3]
+    ):
         continue
     id = int(shape_record.record["OBJECTID"])
     geometry = shape_record.shape.__geo_interface__
@@ -69,7 +74,11 @@ for shape_record in reader.shapeRecords():
     metadata = dict(zip(field_names, shape_record.record))
     locations.append(Location(id=id, geometry=geometry, metadata=metadata))
     locations_variable_data.append(
-        dict(zip([field["name"] for field in variable_fields], shape_record.record))
+        {
+            field: shape_record.record[field]
+            for field in variable_field_names
+        }
+        # dict(zip([field["name"] for field in variable_fields], shape_record.record))
     )
 
 # %% dimensions
