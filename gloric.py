@@ -78,7 +78,6 @@ for shape_record in reader.shapeRecords():
             field: shape_record.record[field]
             for field in variable_field_names
         }
-        # dict(zip([field["name"] for field in variable_fields], shape_record.record))
     )
 
 # %% dimensions
